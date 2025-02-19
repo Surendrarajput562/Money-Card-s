@@ -6,12 +6,12 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 🔥 Cashfree LIVE API Keys
-const CASHFREE_APP_ID = "906949a30216436dacb45dac95949609";  // 👈 Yahan apni LIVE App ID daalo
-const CASHFREE_SECRET_KEY = "cfsk_ma_prod_e67aa984930fe02f49fb2a5dea6b08a5_1edc5eec"; // 👈 Yahan apna LIVE Secret Key daalo
-const CASHFREE_API_URL = "https://api.cashfree.com/pg/orders";  // 👈 Production URL
+// **Cashfree API Keys (Production)**
+const APP_ID = "906949a30216436dacb45dac95949609";  // Cashfree se le
+const SECRET_KEY = "cfsk_ma_prod_e67aa984930fe02f49fb2a5dea6b08a5_1edc5eec"; // Cashfree se le
+const API_URL = "https://api.cashfree.com/pg/orders"; // Production URL
 
-// ✅ Create Order API
+// **Route: Create Order & Get Payment Page**
 app.post("/create-order", async (req, res) => {
     try {
         const { amount, customer_phone } = req.body;
@@ -20,26 +20,27 @@ app.post("/create-order", async (req, res) => {
             order_amount: amount,
             order_currency: "INR",
             customer_details: {
-                customer_phone: customer_phone
+                customer_id: "user_" + Date.now(),
+                customer_phone,
             }
         };
 
-        const response = await axios.post(CASHFREE_API_URL, orderData, {
+        const response = await axios.post(API_URL, orderData, {
             headers: {
                 "Content-Type": "application/json",
                 "x-api-version": "2023-08-01",
-                "x-client-id": CASHFREE_APP_ID,
-                "x-client-secret": CASHFREE_SECRET_KEY
+                "x-client-id": APP_ID,
+                "x-client-secret": SECRET_KEY
             }
         });
 
-        res.json(response.data);
+        res.json({ payment_link: response.data.payment_link });
     } catch (error) {
-        res.status(500).json({ error: error.response ? error.response.data : "Server Error" });
+        console.error("Cashfree Error:", error.response?.data || error.message);
+        res.status(500).json({ error: "Payment creation failed" });
     }
 });
 
-// ✅ Server Start
-app.listen(3000, () => {
-    console.log("🔥 Server running on port 3000");
-});
+// **Start Server**
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
