@@ -1,41 +1,45 @@
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
-require("dotenv").config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-const CASHFREE_CLIENT_ID = "906949a30216436dacb45dac95949609";
-const CASHFREE_CLIENT_SECRET = "cfsk_ma_prod_e67aa984930fe02f49fb2a5dea6b08a5_1edc5eec";
+// 🔥 Cashfree LIVE API Keys
+const CASHFREE_APP_ID = "906949a30216436dacb45dac95949609";  // 👈 Yahan apni LIVE App ID daalo
+const CASHFREE_SECRET_KEY = "cfsk_ma_prod_e67aa984930fe02f49fb2a5dea6b08a5_1edc5eec"; // 👈 Yahan apna LIVE Secret Key daalo
+const CASHFREE_API_URL = "https://api.cashfree.com/pg/orders";  // 👈 Production URL
 
+// ✅ Create Order API
 app.post("/create-order", async (req, res) => {
     try {
-        const { amount, currency, customer_id, customer_email, customer_phone } = req.body;
+        const { amount, customer_phone } = req.body;
 
-        const response = await axios.post("https://api.cashfree.com/pg/orders", {
+        const orderData = {
             order_amount: amount,
-            order_currency: currency,
+            order_currency: "INR",
             customer_details: {
-                customer_id: customer_id,
-                customer_email: customer_email,
                 customer_phone: customer_phone
             }
-        }, {
+        };
+
+        const response = await axios.post(CASHFREE_API_URL, orderData, {
             headers: {
                 "Content-Type": "application/json",
-                "x-client-id": CASHFREE_CLIENT_ID,
-                "x-client-secret": CASHFREE_CLIENT_SECRET
+                "x-api-version": "2023-08-01",
+                "x-client-id": CASHFREE_APP_ID,
+                "x-client-secret": CASHFREE_SECRET_KEY
             }
         });
 
         res.json(response.data);
     } catch (error) {
-        res.status(500).json({ error: error.response.data });
+        res.status(500).json({ error: error.response ? error.response.data : "Server Error" });
     }
 });
 
+// ✅ Server Start
 app.listen(3000, () => {
-    console.log("Server running on port 3000");
+    console.log("🔥 Server running on port 3000");
 });
