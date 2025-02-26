@@ -1,44 +1,67 @@
 const express = require("express");
 const cors = require("cors");
-const fetch = require("node-fetch");
+const axios = require("axios");
+
 
 const app = express();
 app.use(express.json());
-app.use(cors()); // Frontend se API call ke liye
+app.use(cors());  // CORS enable kar diya
 
-const CASHFREE_CLIENT_ID = "906949a30216436dacb45dac95949609";
-const CASHFREE_SECRET_KEY = "cfsk_ma_prod_e67aa984930fe02f49fb2a5dea6b08a5_1edc5eec";
-const CASHFREE_URL = "https://api.cashfree.com/pg/orders"; // Live ke liye URL change karna
-
+// ✅ Cashfree Payment Link Generate API
 app.post("/create-payment", async (req, res) => {
     try {
         const { amount, name, email, phone } = req.body;
 
-        const response = await fetch(CASHFREE_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-client-id": CASHFREE_CLIENT_ID,
-                "x-client-secret": CASHFREE_SECRET_KEY,
-                "x-api-version": "2022-09-01"
-            },
-            body: JSON.stringify({
-                order_amount: amount,
-                order_currency: "INR",
-                customer_details: {
-                    customer_id: "12345",
-                    customer_name: name,
-                    customer_email: email,
-                    customer_phone: phone
-                }
-            })
-        });
+        if (!amount || !name || !email || !phone) {
+            return res.status(400).json({ success: false, message: "All fields are required!" });
+        }
 
-        const data = await response.json();
-        res.json({ success: true, payment_link: data.payment_link });
+        // ✅ Cashfree API Credentials
+        const APP_ID = "906949a30216436dacb45dac95949609";
+        const SECRET_KEY = "cfsk_ma_prod_e67aa984930fe02f49fb2a5dea6b08a5_1edc5eec";
+        const MODE = "PROD"; // "PROD" for live
+
+        // ✅ Cashfree Payment Request Data
+        const requestData = {
+            customer_details: {
+                customer_id: phone,
+                customer_name: name,
+                customer_email: email,
+                customer_phone: phone
+            },
+            order_id: `ORDER_${Date.now()}`,
+            order_amount: amount,
+            order_currency: "INR",
+            order_note: "Test Payment",
+            order_meta: {
+                return_url: "https://moneycard-8f457.web.app/success"
+            }
+        };
+
+        // ✅ Cashfree API Call
+        const response = await axios.post(
+            `https://api.cashfree.com/pg/orders`,
+            requestData,
+            {
+                headers: {
+                    "x-client-id": APP_ID,
+                    "x-client-secret": SECRET_KEY,
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        // ✅ Payment Link Generate
+        if (response.data && response.data.payment_link) {
+            return res.json({ success: true, payment_link: response.data.payment_link });
+        } else {
+            return res.status(500).json({ success: false, message: "Failed to generate payment link" });
+        }
     } catch (error) {
-        res.status(500).json({ success: false, error: "Payment link generation failed" });
+        return res.status(500).json({ success: false, message: "Server Error", error: error.message });
     }
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+// ✅ Server Start
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🔥 Server running on port ${PORT}`));
